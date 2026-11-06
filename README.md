@@ -1,71 +1,70 @@
 # cv-optimizer
 
-Nom provisoire, il pourra changer.
+Générateur de CV adapté à une offre d'emploi.
 
-## C'est quoi ?
+À partir d'un profil structuré que le candidat a lui-même validé, le service produit un CV en PDF adapté à une offre, sans jamais ajouter d'information absente du profil.
 
-Un service web qui aide un candidat à répondre à une offre d'emploi. Le candidat renseigne une fois son parcours (son "dossier de compétences"), colle une offre, et obtient un CV en PDF adapté à cette offre.
+> Statut : développement initial. Le service n'est pas encore utilisable.
 
-Règle d'or : le CV généré ne contient jamais d'information absente du dossier du candidat. Rien n'est inventé.
+## Principes du produit
 
-Ce projet a deux buts : construire un vrai produit, et apprendre le DevOps en le faisant (infrastructure en code, livraison automatique, sécurité, conformité).
+- **Aucune invention.** Chaque élément du CV généré provient du profil validé par le candidat. Un contrôle automatique rejette toute sortie contenant une information absente du profil.
+- **Pas d'évaluation de candidats.** Le service s'adresse aux candidats. Il ne note, ne classe et ne filtre personne.
+- **Données minimales, durée limitée.** Les offres et les CV générés sont supprimés après 30 jours. Hébergement dans l'Union européenne.
+- **Le candidat garde la main.** Il relit et valide son profil, y compris lorsqu'il provient de l'import d'un CV existant.
 
-## Où en est le projet ?
+## Parcours prévu
 
-On avance par petites tranches. Chaque tranche doit fonctionner de bout en bout avant de passer à la suivante.
+1. Création du compte et acceptation de la politique de confidentialité.
+2. Constitution du profil : saisie manuelle ou import d'un CV au format PDF, puis relecture et validation.
+3. Saisie d'une offre d'emploi.
+4. Génération du CV, accompagnée d'un rapport indiquant ce qui a été retenu, reformulé ou écarté.
+5. Téléchargement du PDF.
 
-- [x] 1. Dépôt GitHub créé
-- [ ] 2. Compte AWS sécurisé (à faire dans la console, sans code)
-- [ ] 3. Premier Terraform : stockage de l'état, connexion GitHub vers AWS, journal d'audit, budget
-- [ ] 4. Première intégration continue (GitHub Actions)
-- [ ] 5. Premier déploiement : une page statique en ligne, publiée automatiquement
+## Architecture
 
-Ensuite viendront, un par un : l'authentification, le dossier de compétences, la génération du CV, l'export PDF, l'import d'un CV existant.
+Application sans serveur à administrer, hébergée sur AWS dans l'Union européenne.
 
-## Ce que contient le dépôt aujourd'hui
+- Front : React et TypeScript, servi par S3 et CloudFront.
+- API : API Gateway et AWS Lambda (Python), authentification par Amazon Cognito.
+- Génération : pipeline orchestré par AWS Step Functions, appels au modèle Amazon Nova 2 Lite via Amazon Bedrock, contrôle de cohérence exécuté en code.
+- Données : DynamoDB et S3, chiffrés avec AWS KMS.
+- Infrastructure décrite avec Terraform. Intégration et déploiement continus avec GitHub Actions, authentifiés auprès d'AWS par OIDC. Analyse de la qualité du code avec SonarQube Cloud.
 
-| Fichier | À quoi il sert |
+## Feuille de route
+
+- [ ] Dépôt et documentation de base
+- [ ] Socle AWS : compte sécurisé, Terraform, journal d'audit, budget
+- [ ] Intégration continue
+- [ ] Premier déploiement de bout en bout
+- [ ] Authentification et profil
+- [ ] Génération de CV et contrôle de cohérence
+- [ ] Export PDF et historique
+- [ ] Import d'un CV existant
+- [ ] Bêta fermée
+
+## Structure cible du dépôt
+
+Les dossiers sont ajoutés au fil des besoins.
+
+| Dossier | Contenu |
 |---|---|
-| `README.md` | Ce fichier : présenter le projet et où il en est. |
-| `CLAUDE.md` | Mémo lu par Claude Code : contexte, décisions, règles de travail. |
-| `.gitignore` | Liste de ce que Git doit ignorer, pour ne jamais publier par erreur un mot de passe, une clé ou un fichier d'état Terraform. |
-| `docs/architecture/` | Le PDF de spécifications et d'architecture (la "carte" du projet entier). |
+| `infra/` | Infrastructure AWS décrite avec Terraform |
+| `.github/workflows/` | Workflows d'intégration et de déploiement continus |
+| `apps/web/` | Application web (React, TypeScript) |
+| `services/` | API et pipeline de génération (Python) |
+| `packages/schemas/` | Schémas de données partagés entre le front et le back |
+| `evals/` | Jeu d'évaluation de la qualité de génération |
+| `docs/` | Décisions d'architecture, sécurité, conformité |
 
-C'est volontairement peu. Le PDF décrit tout ce qui sera construit, mais on ne crée un dossier que lorsqu'une tranche en a besoin.
+## Sécurité
 
-## Ce qui sera ajouté plus tard, et pourquoi
+Aucun secret n'est versionné et aucune clé d'accès AWS de longue durée n'est utilisée. Une procédure de signalement des vulnérabilités sera publiée avant toute mise en production.
 
-| Dossier | Rôle | Arrive vers |
-|---|---|---|
-| `infra/` | Terraform : décrit l'infrastructure AWS dans des fichiers texte, pour la recréer à l'identique et garder l'historique. | Tranche 3 |
-| `.github/workflows/` | Recettes automatiques (GitHub Actions) : vérifier le code et le déployer. | Tranche 4 |
-| `docs/adr/` | Une courte note par décision d'architecture importante, pour se rappeler pourquoi on a choisi ça. | Dès la première décision à noter |
-| `apps/web/` | Le site que voit le candidat (React et TypeScript). | Après la tranche 5 |
-| `services/` | Le code serveur en Python : l'API et la génération de CV. | Après le site |
-| `packages/schemas/` | La description commune des données, partagée entre le site et le serveur pour qu'ils parlent le même langage. | Quand le site et le serveur existent |
-| `evals/` | Tests de qualité du modèle de langage (vérifier qu'il n'invente rien). | Avec la génération de CV |
-| `docs/security/`, `docs/compliance/` | Menaces identifiées, registre RGPD, analyse d'impact. | Avec la première fonctionnalité qui manipule des données personnelles |
+## Contributions
 
-## Comment on travaille
-
-- Une tranche à la fois, et on explique ce qu'on fait et pourquoi.
-- Une modification importante se fait sur une branche courte, puis une pull request, plutôt que directement sur `main`.
-- Messages de commit sous la forme `type: résumé` (par exemple `docs: ajoute le README`). Types courants : `feat`, `fix`, `docs`, `chore`, `infra`, `ci`.
-- Aucun secret dans le dépôt : ni mot de passe, ni clé d'accès, ni donnée personnelle réelle.
-- Aucune clé AWS de longue durée : GitHub se connecte à AWS par un mécanisme temporaire (OIDC).
-
-## Décisions déjà prises
-
-- Cible : les candidats (pas les recruteurs). Aucun classement de candidats.
-- Site en React et TypeScript, serveur en Python.
-- Tout sur AWS, sans serveur à administrer, décrit avec Terraform.
-- Un seul compte AWS au départ.
-- Livraison avec GitHub Actions, qualité du code avec SonarQube Cloud.
-- Modèle de langage : Amazon Nova 2 Lite, hébergé dans l'UE.
-- Pas de paiement dans la première version. Offres et CV générés supprimés après 30 jours.
-
-Le détail et les raisons sont dans le PDF de `docs/architecture/`.
+Le projet est en phase initiale : les contributions externes ne sont pas acceptées pour le moment.
 
 ## Licence
 
-Tous droits réservés.
+Tous droits réservés. Le dépôt est consultable publiquement mais n'est pas sous licence libre : toute réutilisation du code nécessite un accord écrit.
